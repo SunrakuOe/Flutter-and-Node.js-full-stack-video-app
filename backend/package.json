@@ -4,6 +4,11 @@
   "description": "a backend for the you-tube like video app",
   "main": "index.js",
   "type": "module",
+  "exports": {
+    ".": "./src/index.js",
+    "./constants": "./src/constants.js",
+    "./app": "./src/app.js"
+  },
   "scripts": {
     "dev": "nodemon ./src/index.js"
   },
@@ -18,6 +23,8 @@
     "prettier": "^3.9.4"
   },
   "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "mongoose": "^9.7.4"
