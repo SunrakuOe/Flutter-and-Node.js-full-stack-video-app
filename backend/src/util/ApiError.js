@@ -16,7 +16,7 @@ class ApiError extends Error {
         if (stack) {
             this.stack = stack;
         } else {
-            Error.captureStackTrace(this, this.constructor);
+            Error.captureStackTrace(this, this.constructor); //info: stacktrace provides you the location of the error - Kaun se file ke kaun se line me code break/error hua hai (basically kahan error ko throw kiya gaya hai)
         }
     }
 }
