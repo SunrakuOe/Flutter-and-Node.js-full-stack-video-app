@@ -5,21 +5,22 @@ import { uploadOnCloudinary } from "../util/service/cloudinary.js";
 import { ApiResponse } from "../util/ApiResponse.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-    const { fullName, email, userName, password } = req.body;
-    console.log(req.body);
+    const { fullName, email, userName, password } = req.body || {};
+    // console.log("req - ", req); //Note: isko mat print karna re baba warna 1km lamba print hota hai
+    // console.log("req.body - ", req.body);
 
     //DOUBT: why we are not cheching all therese validations in a middleware. Arn't middlewares for these. Or can we use
 
     if (
         [fullName, email, userName, password].some(
-            (field) => field.trim() === ""
+            (field) => !field || field.trim() === ""
         )
     ) {
         throw new ApiError(400, "All fields are required");
     }
 
     //TODO: Learn more about thse operators - $or, $and , $nor
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [{ userName }, { email }],
     });
 
@@ -29,12 +30,31 @@ const registerUser = asyncHandler(async (req, res) => {
 
     //DOUBT: console.log req.files, body, avatar etc and see what they are - print everything in this contoller and see
     // console.log(req.files.avatar);
+    // console.log("req.files - ", req.files);
+    // console.log("req.files?.avatar - ", req.files?.avatar);
+    // console.log("req.files?.avatar[0]?.path - ", req.files?.avatar[0]?.path);
+    // console.log("req.files?.coverImage[0]?.path - ", req.files?.coverImage[0]?.path);
 
-    const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    //NOTE: the req.files field added by muler which add all the files data in this files field
+    let avatarLocalPath;
+    let coverImageLocalPath;
 
-    if (!avatarLocalPath) {
+    if (
+        req.files &&
+        Array.isArray(req.files.avatar) &&
+        req.files.avatar.length > 0
+    ) {
+        avatarLocalPath = req.files.avatar[0].path;
+    } else {
         throw new ApiError(400, "Avatar file is required");
+    }
+
+    if (
+        req.files &&
+        Array.isArray(req.files.coverImage) &&
+        req.files.coverImage.length > 0
+    ) {
+        coverImageLocalPath = req.files.coverImage[0].path;
     }
 
     const avatar = await uploadOnCloudinary(avatarLocalPath);
@@ -53,7 +73,7 @@ const registerUser = asyncHandler(async (req, res) => {
         password,
     });
 
-    const createdUser = User.findById(user._id).select(
+    const createdUser = await User.findById(user._id).select(
         "-password -refreshToken"
     );
 

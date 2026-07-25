@@ -6,7 +6,7 @@ const connectDB = async () => {
     try {
         dns.setServers(["8.8.8.8"]);
         const connectionInstance = await mongoose.connect(
-            `${process.env.MONGODB_URI}/${DB_NAME}`
+            `${process.env.MONGODB_URI}${DB_NAME}`
         );
         console.log(
             `\nMongoDB connected | DB HOST : ${connectionInstance.connection.host}`

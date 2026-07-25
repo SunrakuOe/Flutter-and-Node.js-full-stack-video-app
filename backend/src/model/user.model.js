@@ -51,10 +51,10 @@ const userSchema = new mongoose.Schema(
     }
 );
 
-userSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next();
-    this.password = bcrypt.hash(this.password, 12);
-    next();
+userSchema.pre("save", async function () {
+    //note: I removed the next callback parameter in the functon we are passing and returning it coz it was giving errors
+    if (!this.isModified("password")) return;
+    this.password = await bcrypt.hash(this.password, 12);
 });
 
 userSchema.methods.isPasswordCorrect = async function (password) {
