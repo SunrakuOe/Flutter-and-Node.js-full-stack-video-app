@@ -1,5 +1,7 @@
 import multer from "multer";
 
+//TODO: see what multer do in express.js documentations
+//TODO: see whatever files coming to the backend - can we directly upload it to the file storeage without saving it locally without using mutler
 const storage = multer.diskStorage({
     destination: function (req, file, callback) {
         // console.log("file(multer) - ", file)
