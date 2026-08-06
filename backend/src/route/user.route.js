@@ -3,6 +3,7 @@ import {
     loginUser,
     logoutUser,
     registerUser,
+    refreshAccessToken,
 } from "../controller/user.controller.js";
 import { upload } from "../middleware/multer.middleware.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
@@ -20,8 +21,9 @@ router.route("/register").post(
 
 router.route("/login").post(loginUser);
 
-//secured routes - to access these routes the user must be verifyed(logged in) ⬇️
+//⬇️ secured routes - to access these routes the user must be verifyed(logged in) ⬇️
 // TODO: See which http method (get, post, put, delete) should you use for logging out a user
 router.route("/logout").post(verifyJWT, logoutUser);
+router.route("refresh-token").post(refreshAccessToken);
 
 export default router;

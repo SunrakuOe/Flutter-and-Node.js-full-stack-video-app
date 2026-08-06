@@ -13,10 +13,10 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
         //info: these operators return the value for which the result of this condition is determined (learn about how the conditions get checked for those conditional operators by the the the compiler/interpreter to understand waht I have said)
         //info: req.cookies?.accesstoken line is same to req.cookies && req.cookies.accesstoken
         //DOUBT: why we write "Bearer <token>" why no only the token
-        const token = req.header("Authorization")?.replace("Bearer ", "");
-        // const token =
-        //     req.cookies?.accessToken ||
-        //     req.header("Authorization")?.replace("Bearer ", "");
+        // const token = req.header("Authorization")?.replace("Bearer ", "");
+        const token =
+            req.cookies?.accessToken ||
+            req.header("Authorization")?.replace("Bearer ", "");
 
         console.log(token);
 
@@ -24,9 +24,10 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
             throw new ApiError(401, "Unauthorized request");
         }
 
+        // NOTE: This jwt.verify() is verifying everything for us - whether the token is genuine or the its expiry. If everything is good then its giving the decoded palyload else it will gives an error
         // TODO: print the decodedToken and see what it giving
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
-        //INFO: I have printed it and I saw - the jwt.verify verify the token and if it is authenticated (see notes from your copy if you don't know jwt token authenticity get checked) then it returns the decoded payload (which is just base64 encoded)
+        // INFO: I have printed it and I saw - the jwt.verify verify the token and if it is authenticated (see notes from your copy if you don't know jwt token authenticity get checked traditionally) then it returns the decoded payload (which is just base64 encoded)
         console.log(decodedToken);
 
         const user = await User.findById(decodedToken?._id).select(

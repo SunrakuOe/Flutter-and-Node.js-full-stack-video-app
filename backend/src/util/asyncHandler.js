@@ -7,7 +7,8 @@ NOTE:
 const asyncHandler = (requestHandler) => {
     return (req, res, next) => {
         Promise.resolve(requestHandler(req, res, next)).catch((err) =>
-            next(err)
+            //TODO: what next() is doing here in the error part and how is it even working though I am not passing the next() in arguments in many places
+            next(err.message || err)
         );
     };
 };
