@@ -286,16 +286,18 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, "incorrect password");
     }
 
-    const isDifferentNewPassword = await user.isPasswordCorrect(newPassword)
+    const isDifferentNewPassword = await user.isPasswordCorrect(newPassword);
 
-    if(!isDifferentNewPassword){
-        throw new ApiError(400, "new and old password can't be the same")
+    if (!isDifferentNewPassword) {
+        throw new ApiError(400, "new and old password can't be the same");
     }
 
     user.password = newPassword;
     await user.save({ validateBeforeSave: false });
 
-    return res.status(200).json(new new ApiResponse(200,{},"password changed successfully"))
+    return res
+        .status(200)
+        .json(new new ApiResponse(200, {}, "password changed successfully")());
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken };
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword };
