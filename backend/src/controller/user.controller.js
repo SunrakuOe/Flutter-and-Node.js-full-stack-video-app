@@ -210,10 +210,11 @@ const logoutUser = asyncHandler(async (req, res) => {
         req.user._id,
         {
             $set: {
+                // TODO: See all the opeartors in like here the $set
                 refreshToken: undefined,
             },
         },
-        { new: true } //DOUBT: what is this for ({new: true})
+        { new: true } // NOTE: By default, findOneAndUpdate() (the findByIUdAndUpdate() call this method under the hood to update one document in the mongoDb) returns the document as it was before update was applied. If you set new: true, findOneAndUpdate() will instead give you the object after update was applied. Use returnDocument: 'after' instead of new: true, or returnDocument: 'before' instead of new: false.
     );
 
     const options = {
@@ -308,4 +309,28 @@ const getCurrentUser = asyncHandler(async (req, res) => {
         );
 });
 
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser };
+const updateAccountDetails = asyncHandler(async (req, res) => {
+    const { fullName, email } = req.body || {};
+
+    if (!fullName || !email) {
+        throw new ApiError(400, "all fields are required");
+    }
+
+    const user = await User.findByIdAndUpdate(
+        req.user?._id,
+        { fullName, email },
+        { returnDocument: "after" } //info: you can also do {new: true}, which also return a user object after the updaton but the "new" this is deprecated and this is the new recomended way
+    ).select("-password");
+
+    return res.status(200).json(new ApiResponse(200, user, "account details updated successfully"))
+});
+
+export {
+    registerUser,
+    loginUser,
+    logoutUser,
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateAccountDetails,
+};
