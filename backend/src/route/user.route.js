@@ -24,6 +24,6 @@ router.route("/login").post(loginUser);
 //⬇️ secured routes - to access these routes the user must be verifyed(logged in) ⬇️
 // TODO: See which http method (get, post, put, delete) should you use for logging out a user
 router.route("/logout").post(verifyJWT, logoutUser);
-router.route("refresh-token").post(refreshAccessToken);
+router.route("/refresh-token").post(refreshAccessToken);
 
 export default router;
