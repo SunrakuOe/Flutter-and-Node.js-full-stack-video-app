@@ -90,8 +90,16 @@ const registerUser = asyncHandler(async (req, res) => {
         fullName,
         userName: userName.toLowerCase(),
         email,
-        avatar: avatar.url,
-        coverImage: coverImage?.url || "",
+        avatar: {
+            url: avatar.url,
+            public_id: avatar.public_id,
+        },
+        coverImage: coverImage
+            ? {
+                  url: coverImage?.url,
+                  public_id: coverImage?.public_id,
+              }
+            : undefined,
         password,
     });
 
@@ -399,5 +407,5 @@ export {
     getCurrentUser,
     updateAccountDetails,
     updateUserAvatar,
-    updateUserCoverImage
+    updateUserCoverImage,
 };
