@@ -1,7 +1,10 @@
 import { asyncHandler } from "../util/asyncHandler.js";
 import { ApiError } from "../util/ApiError.js";
 import { User } from "../model/user.model.js";
-import { uploadOnCloudinary } from "../util/service/cloudinary.js";
+import {
+    deleteImageFromCloudinary,
+    uploadOnCloudinary,
+} from "../util/service/cloudinary.js";
 import { ApiResponse } from "../util/ApiResponse.js";
 import jwt from "jsonwebtoken";
 
@@ -366,13 +369,18 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
         { returnDocument: "after" }
     ).select("-password");
 
+    const oldAvatarPublicId = req.user?.avatar?.public_id;
+
+    if (oldAvatarPublicId) {
+        await deleteImageFromCloudinary(oldAvatarPublicId);
+    }
+
     return res
         .status(200)
         .json(new ApiResponse(200, user, "avatar updated successfully"));
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
-    
     const coverImageLocalPath = req.file?.path;
 
     if (!coverImageLocalPath) {
@@ -392,6 +400,12 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         },
         { returnDocument: "after" }
     ).select("-password");
+
+    const oldCoverImagePublicId = req.user?.coverImage?.public_id;
+
+    if (oldCoverImagePublicId) {
+        await deleteImageFromCloudinary(oldCoverImagePublicId);
+    }
 
     return res
         .status(200)
