@@ -412,6 +412,79 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, user, "cover image updated successfully"));
 });
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    const username = req.params;
+
+    if (!username?.trim()) {
+        throw new ApiError(400, "username is required");
+    }
+
+    // TODO: print the channel and see
+    const channel = await User.aggregate([
+        {
+            $match: {
+                username: username?.toLowerCase(), // DOUBT: should we use a trimmed username here?
+            },
+        },
+        // DOUBT: is doing frequent lookups(joins) in nosql databased defrease performance
+        {
+            $lookup: {
+                from: "subscriptions", // DOUBT: cannot we write "Subscription" like we do while passing a name to a model()? cannot it automatically make this lowercase and pluralize it
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers",
+            },
+        },
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo",
+            },
+        },
+        {
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers", // DOUBT: when do we add a $ symbol before the value
+                },
+                channelsSubscribedToCount: {
+                    $size: "$subscribedTo",
+                },
+                isSubscribed: {
+                    $cond: {
+                        if: { $in: [req.user?._id, "$subscribers.subscriber"] }, // TODO: understand it carefully
+                        then: true,
+                        else: false,
+                    },
+                },
+            },
+        },
+        {
+            $project: {
+                fullName: 1,
+                userName: 1,
+                subscribersCount: 1,
+                channelsSubscribedToCount: 1,
+                isSubscribed: 1,
+                avatar: 1,
+                coverImage: 1,
+                email: 1
+            },
+        },
+    ]);
+
+    if(!channel?.length){
+        throw new ApiError(404, "channel not found")
+    }
+
+    return res.status(200).json(
+        new ApiResponse(200, channel[0], "user channel fetched successfully")
+    )
+
+    // TODO: write an article (you can write in your own copy note) - pipline, aggregation, $match, $cond...
+});
+
 export {
     registerUser,
     loginUser,
@@ -422,4 +495,5 @@ export {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
+    getUserChannelProfile,
 };
