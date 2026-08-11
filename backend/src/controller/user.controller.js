@@ -152,7 +152,7 @@ const loginUser = asyncHandler(async (req, res) => {
     }
 
     const user = await User.findOne({
-        $or: [{ userName }, { password }],
+        $or: [{ userName }, { email }],
     });
     // console.log(user);
 
