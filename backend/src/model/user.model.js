@@ -105,7 +105,7 @@ userSchema.methods.generateRefreshToken = function () {
 
 /*
 info: 
-==> In backend programming a model generally refers to a class that represents a specific type of data(like a user data, or a post data, a profile data, a transaction data etc.).Like here the mongoose.model() gives us a Model class (like here User is a Model that represent a user data) that will represent a specific data, also provides lot of methods to communicate to the conrrespondence/related collectoin in the database(MongoDB)
+==> In backend programming a model generally refers to a class that represents a specific type of data(like a user data, or a post data, a profile data, a transaction data etc.).Like here the mongoose.model() gives us a subclass of Model class (like here User is a Model that represent a user data) that will represent a specific data, also provides lot of methods to communicate to the conrrespondence/related collectoin in the database(MongoDB)
 
 ==> in mongoose.model(name_of_the_model, sahema_of_the_model) takes 2 arguments - 
 1) a name of the model - which mongoose uses internally to name and register that model and to figure out which collection in the database this this model should talk to.
