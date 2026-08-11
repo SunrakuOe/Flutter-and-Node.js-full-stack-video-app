@@ -7,6 +7,7 @@ import {
 } from "../util/service/cloudinary.js";
 import { ApiResponse } from "../util/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -154,7 +155,7 @@ const loginUser = asyncHandler(async (req, res) => {
     const user = await User.findOne({
         $or: [{ userName }, { email }],
     });
-    // console.log(user);
+    console.log(user);
 
     //TODO: to comment everything below and console.log and see what if we search for a field which is not present in the document
 
@@ -469,20 +470,92 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
                 isSubscribed: 1,
                 avatar: 1,
                 coverImage: 1,
-                email: 1
+                email: 1,
             },
         },
     ]);
 
-    if(!channel?.length){
-        throw new ApiError(404, "channel not found")
+    if (!channel?.length) {
+        throw new ApiError(404, "channel not found");
     }
 
-    return res.status(200).json(
-        new ApiResponse(200, channel[0], "user channel fetched successfully")
-    )
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                channel[0],
+                "user channel fetched successfully"
+            )
+        );
 
     // TODO: write an article (you can write in your own copy note) - pipline, aggregation, $match, $cond...
+});
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+    console.log("a dummy userId is - ", mongoose.Types.ObjectId());
+    const user = await User.aggregate([
+        {
+            // DOUBT: does the match returns an array??
+            $match: {
+                /* 
+                INFO: In case of these aggregation thing, the code goes directly to mongoDB, mongoose doesnot do any manipulation in the code. 
+                - when we access the _id using mongoose we get a string of the hexadecimal representaion of the ObjectId stored in mongoDB. mongoose handle these conversions
+                - but in case of aggregation, because the code is used as it is so we have to use a ObjectId (convert the hexadecimal string to an ObjectId) whenever we specify the _id
+                */
+                // TODO: to write here about the difference between mongoose.Types.ObjectId and mongoose.Schema.Types.ObjectId (write here)
+                _id: mongoose.Types.ObjectId(req.user?._id),
+            },
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHitory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            // TODO: to play with the aggregation pipeline - ex- add the below pipeline outside this lookup
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        userName: 1,
+                                        avatar: 1,
+                                        coverImage: 1,
+                                        // TODO: see what happen if you project a field that doesn't exist in the document
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        // INFO: we are doing the $addFields here bucause till now we get the owner whcih is a array and inside it the user object is present which we can get by accessing the first element of the array. But we want to make it more simple for the front developer so we will add directly the object in he owner field - so here we are adding a owner field which will override the current one and we will make it contain a object
+                        $addFields: {
+                            owner: {
+                                $first: "$owner",
+                            },
+                        },
+                    },
+                ],
+            },
+        },
+    ]);
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                user[0].watchHistory,
+                "watch history fetched successfully"
+            )
+        );
 });
 
 export {
@@ -496,4 +569,5 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
+    getWatchHistory
 };
