@@ -9,6 +9,8 @@ import { ApiResponse } from "../util/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
+// TODO:  how to send a good res status code with api errors. best way to give api error
+
 const generateAccessAndRefreshToken = async (userId) => {
     try {
         const user = await User.findById(userId);
@@ -246,7 +248,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 const refreshAccessToken = asyncHandler(async (req, res) => {
     try {
         const incomingRefreshToken =
-            req.cookies.refreshToken || req.body.refreshToken;
+            req.cookies?.refreshToken || req.body?.refreshToken;
 
         if (!incomingRefreshToken)
             throw new ApiError(401, "Unauthorized Request");
@@ -266,7 +268,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const options = {
             httpOnly: true,
-            secore: true,
+            secure: true,
         };
 
         const { accessToken, refreshToken } =
@@ -291,6 +293,10 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 const changeCurrentPassword = asyncHandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body || {};
 
+    if(!oldPassword || !newPassword) {
+        throw new ApiError(401, "old and new password required")
+    }
+
     const user = await User.findById(req.user?._id);
 
     const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
@@ -299,18 +305,18 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
         throw new ApiError(400, "incorrect password");
     }
 
-    const isDifferentNewPassword = await user.isPasswordCorrect(newPassword);
+    const isSameNewPassword = await user.isPasswordCorrect(newPassword);
 
-    if (!isDifferentNewPassword) {
+    if (isSameNewPassword) {
         throw new ApiError(400, "new and old password can't be the same");
     }
 
     user.password = newPassword;
-    await user.save({ validateBeforeSave: false });
+    await user.save({ validateBeforeSave: false }); // DOUBT: what is this validate before save
 
     return res
         .status(200)
-        .json(new ApiResponse(200, {}, "password changed successfully")());
+        .json(new ApiResponse(200, {}, "password changed successfully"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -365,7 +371,10 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
-            $set: { avatar: avatar.url },
+            $set: { avatar: {
+                url: avatar.url,
+                public_id: avatar.public_id
+            } },
         },
         { returnDocument: "after" }
     ).select("-password");
@@ -397,7 +406,10 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
-            $set: { coverImage: coverImage.url },
+            $set: { coverImage: {
+                url: coverImage.url,
+                public_id: coverImage.public_id
+            } },
         },
         { returnDocument: "after" }
     ).select("-password");
@@ -414,7 +426,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-    const username = req.params;
+    const {username} = req.params;
 
     if (!username?.trim()) {
         throw new ApiError(400, "username is required");
@@ -424,7 +436,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     const channel = await User.aggregate([
         {
             $match: {
-                username: username?.toLowerCase(), // DOUBT: should we use a trimmed username here?
+                userName: username?.toLowerCase(), // DOUBT: should we use a trimmed username here?
             },
         },
         // DOUBT: is doing frequent lookups(joins) in nosql databased defrease performance
@@ -493,7 +505,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-    console.log("a dummy userId is - ", mongoose.Types.ObjectId());
+    console.log("a dummy userId is - ", new mongoose.Types.ObjectId());
     const user = await User.aggregate([
         {
             // DOUBT: does the match returns an array??
@@ -504,7 +516,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                 - but in case of aggregation, because the code is used as it is so we have to use a ObjectId (convert the hexadecimal string to an ObjectId) whenever we specify the _id
                 */
                 // TODO: to write here about the difference between mongoose.Types.ObjectId and mongoose.Schema.Types.ObjectId (write here)
-                _id: mongoose.Types.ObjectId(req.user?._id),
+                _id: new mongoose.Types.ObjectId(req.user?._id),
             },
         },
         {
@@ -569,5 +581,5 @@ export {
     updateUserAvatar,
     updateUserCoverImage,
     getUserChannelProfile,
-    getWatchHistory
+    getWatchHistory,
 };
