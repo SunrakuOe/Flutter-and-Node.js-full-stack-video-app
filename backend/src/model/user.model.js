@@ -1,20 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-
-const imageSchema = new mongoose.Schema(
-    {
-        url: {
-            type: String,
-            required: true,
-        },
-        public_id: {
-            type: String,
-            required: true,
-        },
-    },
-    { _id: false }
-);
+import { mediaFileSubSchema } from "./sub_schema/mediafile.subschema.js";
 
 const userSchema = new mongoose.Schema(
     {
@@ -40,11 +27,11 @@ const userSchema = new mongoose.Schema(
             index: true,
         },
         avatar: {
-            type: imageSchema,
+            type: mediaFileSubSchema,
             required: true,
         },
         coverImage: {
-            type: imageSchema,
+            type: mediaFileSubSchema,
         },
         watchHistory: [
             {

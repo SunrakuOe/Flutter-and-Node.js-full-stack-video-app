@@ -1,14 +1,15 @@
 import mongoose, { Schema } from "mongoose"; //NOTE: you can also import Schema directly so you don't have to do mongoose.Schema all the time
+import { mediaFileSubSchema } from "./sub_schema/mediafile.subschema.js";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const videoSchema = new Schema(
     {
         videoFile: {
-            type: String,
+            type: mediaFileSubSchema,
             required: true,
         },
         thumbnail: {
-            type: String,
+            type: mediaFileSubSchema,
             required: true,
         },
         title: {
@@ -19,7 +20,7 @@ const videoSchema = new Schema(
             type: String,
             required: true,
         },
-        duraton: {
+        duration: {
             type: Number,
             required: true,
         },
@@ -32,6 +33,7 @@ const videoSchema = new Schema(
             default: true,
         },
         owner: {
+            //DOUBT: I think I should make it required
             type: Schema.Types.ObjectId,
             ref: "User",
         },
