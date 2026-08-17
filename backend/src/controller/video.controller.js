@@ -3,6 +3,7 @@ import { ApiResponse } from "../util/ApiResponse.js";
 import { asyncHandler } from "../util/asyncHandler.js";
 import { uploadOnCloudinary } from "../util/service/cloudinary.js";
 import { Video } from "../model/video.model.js";
+import mongoose from "mongoose";
 
 /* 
 TODO:
@@ -88,15 +89,95 @@ const publishAVideo = asyncHandler(async (req, res) => {
         owner: req.user._id,
     });
 
-    const uploadedVideo = await Video.findById(video._id)
+    const uploadedVideo = await Video.findById(video._id);
 
-    if(!uploadedVideo) {
-        throw new ApiError(500, "unable to upload file")
+    if (!uploadedVideo) {
+        throw new ApiError(500, "unable to upload file");
     }
 
-    return res.status(200).json(
-        new ApiResponse(200, uploadedVideo, "video uploaded successfully")
-    );
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, uploadedVideo, "video uploaded successfully")
+        );
 });
 
-export { publishAVideo };
+const getVideoById = asyncHandler(async (req, res) => {
+
+    /* 
+    - get the videoId from the params
+    - validate it
+    - get the video document forom the db by joining the owner with the User using aggretation pipeline
+    - add the subscribers count
+    - add the isSubscribed field
+    - project only _id, userName, fullName, subscribers, isSubscribed
+    - send the response
+    */
+
+    // NOTE: you are thinking that why directly passing the videoId in the params, why not in query param because you have seen that YouTube use /watch?v={videoId}. See - that is a webserver URL, they want to show a perticular UI in which the data is changing. Fro them the files are resources. But for our app server each video data is a specific resource so we sending the videoId in the path param.
+    const { videoId } = req.params || {};
+
+    if(!videoId){
+        throw new ApiError(400, "videoId is required")
+    }
+
+    const video = await Video.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(videoId)
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "user",
+                pipeline: [
+                    {
+                        $lookup:{
+                            from: "subscriptions",
+                            localField: "_id",
+                            foreignField: "channel",
+                            as: "subscribers"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            subscribersCount: {
+                                $size: "$subscribers"
+                            },
+                            isSubscribed: {
+                                $cond: {
+                                    if: {
+                                        $in: [req.user?._id, "$subscribers"]
+                                    },
+                                    then: true,
+                                    else: false
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $project: {
+                            _id: 1,
+                            fullName: 1,
+                            userName: 1,
+                            avatar: 1,
+                            subscribersCount: 1,
+                            isSubscribed: 1
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+
+    if(!video){
+        throw new ApiError(500, "unable to fetch video")
+    }
+
+    return res.status(200).json(new ApiResponse(200, video, "video fetched successfully"))
+});
+
+export { publishAVideo,getVideoById };
