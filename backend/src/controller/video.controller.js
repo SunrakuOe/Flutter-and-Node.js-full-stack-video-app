@@ -1,9 +1,13 @@
 import { ApiError } from "../util/ApiError.js";
 import { ApiResponse } from "../util/ApiResponse.js";
 import { asyncHandler } from "../util/asyncHandler.js";
-import { uploadOnCloudinary } from "../util/service/cloudinary.js";
+import {
+    deleteImageFromCloudinary,
+    uploadOnCloudinary,
+} from "../util/service/cloudinary.js";
 import { Video } from "../model/video.model.js";
 import mongoose from "mongoose";
+import { unlinkFileSync } from "../util/service/fileSystem.js";
 
 /* 
 TODO:
@@ -102,8 +106,8 @@ const publishAVideo = asyncHandler(async (req, res) => {
         );
 });
 
+// TODO: there is an error in the getVideoById() because we have to check first that the video is published or not first and if it is not published then only the owner should have the right to watch the video
 const getVideoById = asyncHandler(async (req, res) => {
-
     /* 
     - get the videoId from the params
     - validate it
@@ -117,15 +121,15 @@ const getVideoById = asyncHandler(async (req, res) => {
     // NOTE: you are thinking that why directly passing the videoId in the params, why not in query param because you have seen that YouTube use /watch?v={videoId}. See - that is a webserver URL, they want to show a perticular UI in which the data is changing. Fro them the files are resources. But for our app server each video data is a specific resource so we sending the videoId in the path param.
     const { videoId } = req.params || {};
 
-    if(!videoId){
-        throw new ApiError(400, "videoId is required")
+    if (!videoId) {
+        throw new ApiError(400, "videoId is required");
     }
 
     const video = await Video.aggregate([
         {
             $match: {
-                _id: new mongoose.Types.ObjectId(videoId)
-            }
+                _id: new mongoose.Types.ObjectId(videoId),
+            },
         },
         {
             $lookup: {
@@ -135,28 +139,28 @@ const getVideoById = asyncHandler(async (req, res) => {
                 as: "user",
                 pipeline: [
                     {
-                        $lookup:{
+                        $lookup: {
                             from: "subscriptions",
                             localField: "_id",
                             foreignField: "channel",
-                            as: "subscribers"
-                        }
+                            as: "subscribers",
+                        },
                     },
                     {
                         $addFields: {
                             subscribersCount: {
-                                $size: "$subscribers"
+                                $size: "$subscribers",
                             },
                             isSubscribed: {
                                 $cond: {
                                     if: {
-                                        $in: [req.user?._id, "$subscribers"]
+                                        $in: [req.user?._id, "$subscribers"],
                                     },
                                     then: true,
-                                    else: false
-                                }
-                            }
-                        }
+                                    else: false,
+                                },
+                            },
+                        },
                     },
                     {
                         $project: {
@@ -165,19 +169,90 @@ const getVideoById = asyncHandler(async (req, res) => {
                             userName: 1,
                             avatar: 1,
                             subscribersCount: 1,
-                            isSubscribed: 1
-                        }
-                    }
-                ]
-            }
-        }
-    ])
+                            isSubscribed: 1,
+                        },
+                    },
+                ],
+            },
+        },
+    ]);
 
-    if(!video){
-        throw new ApiError(500, "unable to fetch video")
+    if (!video) {
+        throw new ApiError(500, "unable to fetch video");
     }
 
-    return res.status(200).json(new ApiResponse(200, video, "video fetched successfully"))
+    return res
+        .status(200)
+        .json(new ApiResponse(200, video, "video fetched successfully"));
 });
 
-export { publishAVideo,getVideoById };
+const updateVideo = asyncHandler(async (req, res) => {
+    try {
+        const { videoId } = req.params;
+
+        const video = await Video.findById(videoId);
+
+        if (!video) {
+            throw new ApiError(404, "video not found");
+        }
+
+        if (!video.owner.equals(req.user?._id)) {
+            console.log(video.owner, req.user?._id);
+            throw new ApiError(
+                401,
+                "unauthorized to update the video the video"
+            );
+        }
+
+        const { title, description } = req.body;
+
+        if (!title?.trim() || !description?.trim()) {
+            throw new ApiError(400, "title and description are required");
+        }
+
+        const thumbnailLocalFilePath = req.file?.path;
+
+        if (!thumbnailLocalFilePath) {
+            throw new ApiError(400, "thumbnail is required");
+        }
+
+        const newThumbnailCludinary = await uploadOnCloudinary(
+            thumbnailLocalFilePath
+        );
+
+        if (!newThumbnailCludinary) {
+            throw new ApiError(500, "unable to update thumbnail");
+        }
+
+        const oldThumbnailPublicId = video.thumbnail.public_id;
+
+        video.thumbnail = {
+            url: newThumbnailCludinary.url,
+            public_id: newThumbnailCludinary.public_id,
+        };
+        video.title = title;
+        video.description = description;
+        await video.save({ validateBeforeSave: false });
+
+        await deleteImageFromCloudinary(oldThumbnailPublicId);
+
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                {
+                    title,
+                    description,
+                    thumbnail: newThumbnailCludinary.url,
+                    thumbnailPublicId: newThumbnailCludinary.public_id,
+                },
+                "video details updated successfully"
+            )
+        );
+    } catch (error) {
+        // INFO: I a doing this because if I got any error befor the thumbnail uploaded to cloudinary then the local thumbnail file stays there and don't removed. You can do it everywhere where you dealing with the images
+        unlinkFileSync(req.file?.path);
+        throw error;
+    }
+});
+
+export { publishAVideo, getVideoById, updateVideo };
