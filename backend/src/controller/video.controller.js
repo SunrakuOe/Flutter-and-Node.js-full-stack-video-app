@@ -125,6 +125,7 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(400, "videoId is required");
     }
 
+    // NOTE: aggretate always return an array
     const video = await Video.aggregate([
         {
             $match: {
@@ -136,7 +137,7 @@ const getVideoById = asyncHandler(async (req, res) => {
                 from: "users",
                 localField: "owner",
                 foreignField: "_id",
-                as: "user",
+                as: "owner",
                 pipeline: [
                     {
                         $lookup: {
@@ -154,7 +155,7 @@ const getVideoById = asyncHandler(async (req, res) => {
                             isSubscribed: {
                                 $cond: {
                                     if: {
-                                        $in: [req.user?._id, "$subscribers"],
+                                        $in: [req.user?._id, "$subscribers.subscriber"],
                                     },
                                     then: true,
                                     else: false,
@@ -175,15 +176,26 @@ const getVideoById = asyncHandler(async (req, res) => {
                 ],
             },
         },
+        {
+            $addFields: {
+                owner: {
+                    $first: "$owner"
+                }
+            }
+        }
     ]);
 
-    if (!video) {
+    if (!video || !Array.isArray(video) || !video.length) {
         throw new ApiError(500, "unable to fetch video");
+    }
+
+    if (!video.isPublished && !video.owner.equals(req.user._id)) {
+        throw new ApiError(401, "unauthorized access to a private video");
     }
 
     return res
         .status(200)
-        .json(new ApiResponse(200, video, "video fetched successfully"));
+        .json(new ApiResponse(200, video[0], "video fetched successfully"));
 });
 
 const updateVideo = asyncHandler(async (req, res) => {
