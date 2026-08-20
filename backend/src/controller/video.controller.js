@@ -155,7 +155,10 @@ const getVideoById = asyncHandler(async (req, res) => {
                             isSubscribed: {
                                 $cond: {
                                     if: {
-                                        $in: [req.user?._id, "$subscribers.subscriber"],
+                                        $in: [
+                                            req.user?._id,
+                                            "$subscribers.subscriber",
+                                        ],
                                     },
                                     then: true,
                                     else: false,
@@ -179,10 +182,10 @@ const getVideoById = asyncHandler(async (req, res) => {
         {
             $addFields: {
                 owner: {
-                    $first: "$owner"
-                }
-            }
-        }
+                    $first: "$owner",
+                },
+            },
+        },
     ]);
 
     if (!video || !Array.isArray(video) || !video.length) {
@@ -267,4 +270,21 @@ const updateVideo = asyncHandler(async (req, res) => {
     }
 });
 
-export { publishAVideo, getVideoById, updateVideo };
+// DOUBT: There is a question that came to my mind that - sould we have some controllers for the admin. because I the admin must have the right to delete any video. and should I have to add those logic inside the the controllers. is that a good practice?
+const deleteVideo = asyncHandler(async (req, res) => {
+    /* 
+        - get the video id from the param
+        - delete the video
+        - return a success response
+    */
+    //note: I am not doing the || {} because I want that if the method is not called on a route having params then I want to give errors
+    const { videoId } = req.params;
+
+    await Video.findByIdAndDelete(videoId);
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "video deleted successfully"));
+});
+
+export { publishAVideo, getVideoById, updateVideo, deleteVideo };
