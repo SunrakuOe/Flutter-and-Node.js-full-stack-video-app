@@ -24,4 +24,25 @@ const authorizeVideoOwnership = asyncHandler(async (req, _, next) => {
     next();
 });
 
-export {authorizeVideoOwnership}
+const checkAuthorizeToView = asyncHandler(async (req, _, next) => {
+    const { videoId } = req.params;
+
+    if (!videoId) {
+        throw new ApiError(400, "video id is required");
+    }
+
+    const video = await Video.findById(videoId);
+
+    if (!video) {
+        throw new ApiError(404, "video file not found");
+    }
+
+    if (!video.isPublished && !req.user._id.equals(video.owner)) {
+        throw new ApiError(403, "unauauthorize access to video resource");
+    }
+
+    req.video = video;
+    next();
+});
+
+export { authorizeVideoOwnership, checkAuthorizeToView };
