@@ -192,10 +192,6 @@ const getVideoById = asyncHandler(async (req, res) => {
         throw new ApiError(500, "unable to fetch video");
     }
 
-    if (!video.isPublished && !video.owner.equals(req.user._id)) {
-        throw new ApiError(401, "unauthorized access to a private video");
-    }
-
     return res
         .status(200)
         .json(new ApiResponse(200, video[0], "video fetched successfully"));
@@ -287,4 +283,29 @@ const deleteVideo = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "video deleted successfully"));
 });
 
-export { publishAVideo, getVideoById, updateVideo, deleteVideo };
+// TODO: jaan buchh ke ek error do isme and dekho ki passing next and without passing it response me kya faraq aata hai
+const togglePublishStatus = asyncHandler(async (req, res) => {
+    const video = req.video;
+
+    if (!video) {
+        throw new ApiError(404, "video resource not avilable");
+    }
+
+    video.isPublished = !video.isPublished;
+
+    await video.save();
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, video, "publish status updated successfully")
+        );
+});
+
+export {
+    publishAVideo,
+    getVideoById,
+    updateVideo,
+    deleteVideo,
+    togglePublishStatus,
+};
