@@ -39,7 +39,9 @@ router
     .route("/avatar")
     .patch(verifyJWT, upload.single("avatar"), updateUserAvatar); //  INFO: the route is just /avatar and I haven't used /update-avatar because the method(patch here) inform that na ki it is to update the field
 
-router.route('/cover-image').patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage)
-router.route('/c/:username').get(verifyJWT, getUserChannelProfile)
-router.route('/watch-history').get(verifyJWT, getWatchHistory)
+router
+    .route("/cover-image")
+    .patch(verifyJWT, upload.single("coverImage"), updateUserCoverImage);
+router.route("/c/:username").get(verifyJWT, getUserChannelProfile);
+router.route("/watch-history").get(verifyJWT, getWatchHistory);
 export default router;

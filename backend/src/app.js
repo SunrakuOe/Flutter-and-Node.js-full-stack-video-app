@@ -24,8 +24,8 @@ import userRouter from "./route/user.route.js";
 
 app.use("/api/v1/user", userRouter);
 
-import videoRouter from "./route/video.route.js"
+import videoRouter from "./route/video.route.js";
 
-app.use("/api/v1/video", videoRouter)
+app.use("/api/v1/video", videoRouter);
 
 export { app };
