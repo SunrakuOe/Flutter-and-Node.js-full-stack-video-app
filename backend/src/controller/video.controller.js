@@ -253,8 +253,10 @@ const updateVideo = asyncHandler(async (req, res) => {
                 {
                     title,
                     description,
-                    thumbnail: newThumbnailCludinary.url,
-                    thumbnailPublicId: newThumbnailCludinary.public_id,
+                    thumbnail: {
+                        url: newThumbnailCludinary.url,
+                        publicId: newThumbnailCludinary.public_id,
+                    },
                 },
                 "video details updated successfully"
             )
