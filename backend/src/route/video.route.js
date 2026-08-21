@@ -7,7 +7,7 @@ import {
 } from "../controller/video.controller.js";
 import { verifyJWT } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/multer.middleware.js";
-import { authorizeVideoOwnership } from "../middleware/video.middleware.js";
+import { authorizeVideoOwnership, checkAuthorizeToView } from "../middleware/video.middleware.js";
 
 const router = Router();
 router.use(verifyJWT);
@@ -22,7 +22,7 @@ router.route("/").post(
 
 router
     .route("/:videoId")
-    .get(getVideoById)
+    .get(checkAuthorizeToView, getVideoById)
     .patch(upload.single("thumbnail"), updateVideo)
     .delete(authorizeVideoOwnership, deleteVideo);
 
