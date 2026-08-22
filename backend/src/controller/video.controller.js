@@ -6,7 +6,7 @@ import {
     uploadOnCloudinary,
 } from "../util/service/cloudinary.js";
 import { Video } from "../model/video.model.js";
-import mongoose from "mongoose";
+import mongoose, { isValidObjectId } from "mongoose";
 import { unlinkFileSync } from "../util/service/fileSystem.js";
 
 /* 
@@ -304,10 +304,108 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
         );
 });
 
+const getAllVideos = asyncHandler(async (req, res) => {
+    const {
+        page = 1,
+        limit = 10,
+        query = "",
+        sortBy,
+        sortType,
+        userId,
+    } = req.query;
+
+    const pipeline = [];
+    console.log(userId);
+    if (userId && isValidObjectId(userId)) {
+        pipeline.push({
+            $match: {
+                owner: new mongoose.Types.ObjectId(userId),
+            },
+        });
+    } else {
+        throw new ApiError(400, "Invalid userId");
+    }
+
+    if (query) {
+        pipeline.push({
+            $match: {
+                $or: [
+                    { title: { $regex: query, $options: "i" } },
+                    { description: { $regex: query, $options: "i" } },
+                ],
+            },
+        });
+    }
+
+    if (!req.isOwner) {
+        pipeline.push({
+            $match: {
+                isPublished: true,
+            },
+        });
+    }
+
+    if (sortBy && sortType) {
+        pipeline.push({
+            $sort: {
+                [sortBy]: sortType.toLowerCase() === "asc" ? 1 : -1, // 1 for increasing order and -1 dor decreasing order
+            },
+        });
+    } else {
+        pipeline.push({
+            $sort: {
+                views: -1, // primary sort - most views first
+                createdAt: -1, // tie breaker - if views are equal then the newest first
+            },
+        });
+    }
+
+    pipeline.push(
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "owner",
+                pipeline: [
+                    {
+                        $project: {
+                            username: 1,
+                            "avatar.url": 1,
+                            fullName: 1,
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            $unwind: "$owner", // TODO: to learn more about the $unwind
+        }
+    );
+
+    const options = {
+        page,
+        limit,
+    };
+
+    const aggregate = Video.aggregate(pipeline);
+
+    const videos = await Video.aggregatePaginate(aggregate, options);
+
+    if (!videos) {
+        throw new ApiError(500, "error fetching video");
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, videos, "videos fetched successfully"));
+});
+
 export {
     publishAVideo,
     getVideoById,
     updateVideo,
     deleteVideo,
     togglePublishStatus,
+    getAllVideos,
 };
