@@ -315,7 +315,7 @@ const getAllVideos = asyncHandler(async (req, res) => {
     } = req.query;
 
     const pipeline = [];
-    console.log(userId);
+    
     if (userId && isValidObjectId(userId)) {
         pipeline.push({
             $match: {
