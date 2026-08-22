@@ -45,4 +45,17 @@ const checkAuthorizeToView = asyncHandler(async (req, _, next) => {
     next();
 });
 
-export { authorizeVideoOwnership, checkAuthorizeToView };
+const checkIsOwner = asyncHandler(async (req, _, next) => {
+    const user = req.user;
+    const profileUserId = req.query.userId;
+
+    if (user._id.toString() === profileUserId?.toString()) {
+        req.isOwner = true;
+    } else {
+        req.isOwner = false;
+    }
+
+    next();
+});
+
+export { authorizeVideoOwnership, checkAuthorizeToView, checkIsOwner };
