@@ -1,4 +1,3 @@
-//TODO: Lern more bout this Error in documents from node
 class ApiError extends Error {
     constructor(
         statusCode,
