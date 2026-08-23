@@ -28,4 +28,10 @@ import videoRouter from "./route/video.route.js";
 
 app.use("/api/v1/video", videoRouter);
 
+
+//note: add error handling middleware always at the end because this handler only get called by Express if any next(any argument and not necesserily an error) called before the handler
+
+import { errorHandler } from "./middleware/errorHandler.middleware.js";
+app.use(errorHandler)
+
 export { app };
