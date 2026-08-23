@@ -4,7 +4,8 @@ import { asyncHandler } from "../util/asyncHandler.js";
 import jwt from "jsonwebtoken";
 
 //INFO: next() just indecate to run the next task (either run the next middleware or give the response(when I said "give the response" I mean the actual task - did you remember that middlewares are nothing but just functions/tasks we perform before giving the actual response))
-//next() just say - "It's done here and now we move to the next task(middleware or to give response)"
+//next() just say - "It's done here and now we move to the next task(middleware or to give response(call the controller))"
+// for simplicity you can just say - it indicates to move to the next middleware
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
     // Thsi try catch is here because verifying jwt (jwt.verify()) can through error if the token is not authorized and we should give a custom 401 error for error. when I didn't handled it in postman it shous like a 500 error code so now I add the try-catch 'cause I want to tell the user that "its not me, its you mf"
@@ -18,7 +19,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
             req.cookies?.accessToken ||
             req.header("Authorization")?.replace("Bearer ", "");
 
-        console.log(token);
+        // console.log(token);
 
         if (!token) {
             throw new ApiError(401, "Unauthorized request");
@@ -28,7 +29,7 @@ export const verifyJWT = asyncHandler(async (req, _, next) => {
         // TODO: print the decodedToken and see what it giving
         const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
         // INFO: I have printed it and I saw - the jwt.verify verify the token and if it is authenticated (see notes from your copy if you don't know jwt token authenticity get checked traditionally) then it returns the decoded payload (which is just base64 encoded)
-        console.log(decodedToken);
+        // console.log(decodedToken);
 
         const user = await User.findById(decodedToken?._id).select(
             "-password -refreshToken"
