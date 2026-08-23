@@ -13,6 +13,7 @@ const asyncHandler = (requestHandler) => {
         /* 
             NOTE: The Promise.resolve(value) just wraps a value in promise if it is not already a Promise
             - it returns a Promise object resolved with that given value
+            - as we are handling the error using promise (using .catch) we need to be sure that it is a Promise
             - if the value is a regular value (string, number, object, array etc.), then it returns a Promise already fulfilled with that value
             - if the value is a Promise then it simply returns that exact same Promise value directly, rather than nexting it to a new one
             - if the value is a thenable object (an object with a .then() method) then it returns a Promise that follows the then() of the thenable object (means if you do the .then() on the returned Promise js will call the .then() of the thenable object)
