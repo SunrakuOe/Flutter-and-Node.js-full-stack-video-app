@@ -121,4 +121,54 @@ const getSubscribedChannels = asyncHandler(async (req, res) => {
         );
 });
 
-export { toggleSubscription, getSubscribedChannels };
+
+const getSubscriberChannels = asyncHandler(async (req, res) => {
+    const {channelId} = req.params
+
+    if(!channelId || !isValidObjectId(channelId)){
+        throw new ApiError(400, "invalid channelId")
+    }
+
+    const subscribers = await Subscription.aggregate([
+        {
+            $match: {
+                channel: new mongoose.Types.ObjectId(channelId)
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "subscriber",
+                foreignField: "_id",
+                as: "subscriber",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 1,
+                            userName: 1,
+                            fullName: 1,
+                            // info: instead or directly project new field that contains avatar.url you can also add a another pipeline before $project where you add a new field called avatarUrl and then just do avatarUrl: 1 here
+                            avatarUrl: "avtar.url"
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                subscriber: {
+                    $first: "$subscriber"
+                }
+            }
+        },
+        {
+            $replaceRoot: {
+                newRoot: "$subscriber"
+            }
+        }
+    ])
+
+    return res.status(200).json(new ApiResponse(200, subscribers, "subscribers fetched successfully"))
+})
+
+export { toggleSubscription, getSubscribedChannels, getSubscriberChannels };
