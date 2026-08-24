@@ -19,8 +19,7 @@ const asyncHandler = (requestHandler) => {
             - if the value is a thenable object (an object with a .then() method) then it returns a Promise that follows the then() of the thenable object (means if you do the .then() on the returned Promise js will call the .then() of the thenable object)
         */
         Promise.resolve(requestHandler(req, res, next)).catch(
-            (err) =>
-                next(err)
+            (err) => next(err)
 
             /* 
                 NOTE: so next() is express's built-in function to pass control to the next middleware - and specifically, if you call the next() with an argument for example next(error) then Expres treats it as an error and forwarrd it(the argument passed - like error here) to your error-handleing middleware
