@@ -3,6 +3,7 @@ import { ApiResponse } from "../util/ApiResponse.js";
 import { asyncHandler } from "../util/asyncHandler.js";
 import { Subscription } from "../model/subscription.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
+import { User } from "../model/user.model.js";
 
 const toggleSubscription = asyncHandler(async (req, res) => {
     /* 
@@ -33,6 +34,12 @@ const toggleSubscription = asyncHandler(async (req, res) => {
         return res
             .status(200)
             .json(new ApiResponse(200, {}, "unsubscribed successfully"));
+    }
+
+    const isChannelExists = await User.exists({_id: channelId})
+
+    if(!isChannelExists){
+        throw new ApiError(400, "channel does not exist")
     }
 
     const newSubscription = await Subscription.create({
