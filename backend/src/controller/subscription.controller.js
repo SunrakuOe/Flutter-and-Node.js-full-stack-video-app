@@ -49,4 +49,69 @@ const toggleSubscription = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, newSubscription, "subscribed successfully"));
 });
 
-export { toggleSubscription };
+const getSubscribedChannels = asyncHandler(async (req, res) => {
+    // TODO: in future make it paginatin based - 'coz that is more efficient
+    /* 
+        - get the userId(whose subscribed channels you want to find) from the params
+        - get the data using aggregation
+        - if you have the data then send else throw an error
+    */
+
+    const { channelId } = req.params;
+
+    if (!channelId || !isValidObjectId(channelId)) {
+        throw new ApiError(400, "invalid channelId");
+    }
+
+    const subscribedChannels = await Subscription.aggregate([
+        {
+            $match: {
+                subscriber: new mongoose.Types.ObjectId(channelId),
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "channel",
+                foreignField: "_id",
+                as: "channel",
+                pipeline: [
+                    {
+                        $project: {
+                            _id: 1,
+                            userName: 1,
+                            fullName: 1,
+                            avatarUrl: "$avatar.url"
+                        },
+                    },
+                ],
+            },
+        },
+        {
+            $addFields: {
+                channel: {
+                    $first: "$channel",
+                },
+            },
+        },
+        {
+            $replaceRoot: {
+                newRoot: "$channel"
+            }
+        }
+    ]);
+
+    // NOTE: don't throw an error if the !subscribedChannels because may be the user have not subscribed to anyone yet. so just return
+
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(
+                200,
+                subscribedChannels,
+                "subscribed channels fetched successfully"
+            )
+        );
+});
+
+export { toggleSubscription, getSubscribedChannels };
