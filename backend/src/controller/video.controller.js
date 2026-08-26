@@ -180,12 +180,44 @@ const getVideoById = asyncHandler(async (req, res) => {
             },
         },
         {
+            $lookup: {
+                from:"likes",
+                localField: "_id",
+                foreignField: "parent",
+                as: "likes",
+                pipeline: [
+                    {
+                        $match: {
+                            parentModel: "Video"
+                        }
+                    }
+                ]
+            }
+        },
+        {
             $addFields: {
                 owner: {
                     $first: "$owner",
                 },
+                likesCount: {
+                    $size: "$likes"
+                }
             },
         },
+        {
+            $project: {
+                _id: 1,
+                videoFile: 1,
+                thumbnail: 1,
+                title: 1,
+                description: 1,
+                duration: 1,
+                views: 1,
+                isPublished: 1,
+                owner: 1,
+                likesCount: 1
+            }
+        }
     ]);
 
     if (!video || !Array.isArray(video) || !video.length) {
