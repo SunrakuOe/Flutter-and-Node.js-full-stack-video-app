@@ -1,4 +1,4 @@
-import { Schema } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const commentSchema = new Schema({
     content: {
@@ -20,3 +20,5 @@ const commentSchema = new Schema({
         enum: ["Video", "Tweet", "Comment"],
     },
 });
+
+export default (Comment = mongoose.model("Comment", commentSchema));
