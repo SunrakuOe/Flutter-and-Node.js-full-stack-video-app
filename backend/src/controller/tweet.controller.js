@@ -32,14 +32,16 @@ const createTweet = asyncHandler(async (req, res) => {
 const getUserTweets = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
-    if(!userId && !isValidObjectId(userId)){
-        throw new ApiError(400, "invalid userId")
+    if (!userId && !isValidObjectId(userId)) {
+        throw new ApiError(400, "invalid userId");
     }
 
-    const user = await User.findById(userId).select("_id userName avatar.url fullName");
+    const user = await User.findById(userId).select(
+        "_id userName avatar.url fullName"
+    );
 
-    if(!user){
-        throw new ApiError(400, "user not available")
+    if (!user) {
+        throw new ApiError(400, "user not available");
     }
 
     const tweets = await Tweet.aggregate([
@@ -95,13 +97,63 @@ const getUserTweets = asyncHandler(async (req, res) => {
                 content: 1,
                 likesCount: 1,
                 commentsCount: 1,
-            }
-        }
+            },
+        },
     ]);
 
     return res
         .status(200)
-        .json(new ApiResponse(200, {user, tweets}, "tweets fetched successfully"));
+        .json(
+            new ApiResponse(
+                200,
+                { user, tweets },
+                "tweets fetched successfully"
+            )
+        );
 });
 
-export { createTweet, getUserTweets };
+const updateTweet = asyncHandler(async (req, res) => {
+    const { tweetId } = req.params;
+    const { content } = req.body || {};
+
+    if (!tweetId || !isValidObjectId(tweetId)) {
+        throw new ApiError(400, "invalid tweetId");
+    }
+
+    if (!content?.trim()) {
+        throw new ApiError(400, "content is absent");
+    }
+
+    const tweet = await Tweet.findByIdAndUpdate(
+        tweetId,
+        { content },
+        { returnDocument: "after" }
+    );
+
+    if (!tweet) {
+        return new ApiError(500, "unable to update tweet");
+    }
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, tweet, "tweet updated successfully "));
+});
+
+const deleteTweet = asyncHandler(async (req, res) => {
+    const {tweetId} = req.params
+
+    // info: I know that it is aunecessary, because I am already checking that in the middleware - just to calm my mind I did it here again
+    if(!tweetId || !isValidObjectId(tweetId)) {
+        throw new ApiError(400, "invalid tweetId")
+    }
+
+    const tweet = await Tweet.findByIdAndDelete(tweetId);
+
+    if(!tweet){
+        throw new ApiError(400, "unable to delete")
+    }
+    
+    return res.status(200).json(new ApiResponse(200, {}, "tweet deleted successfully"))
+})
+
+export { createTweet, getUserTweets, updateTweet, deleteTweet };
