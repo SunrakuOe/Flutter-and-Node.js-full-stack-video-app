@@ -4,9 +4,11 @@ import {
     getVideoComments,
     getTweetComments,
     getCommentReplies,
-    addComment,
     updateComment,
     deleteComment,
+    addVideoComment,
+    addTweetComment,
+    addCommentReply,
 } from "../controller/comment.controller.js";
 
 const router = Router();
@@ -19,7 +21,11 @@ router.route("/tweet/:tweetId").get(getTweetComments);
 
 router.route("/comment/:commentId").get(getCommentReplies);
 
-router.route("/").post(addComment);
+router.route("/video").post(addVideoComment);
+
+router.route("/tweet").post(addTweetComment);
+
+router.route("/reply").post(addCommentReply);
 
 router.route("/:commentId").patch(updateComment).delete(deleteComment);
 
