@@ -75,7 +75,7 @@ const getUserTweets = asyncHandler(async (req, res) => {
                 pipeline: [
                     {
                         $match: {
-                            parentModel: "Comment",
+                            parentModel: "Tweet",
                         },
                     },
                 ],
