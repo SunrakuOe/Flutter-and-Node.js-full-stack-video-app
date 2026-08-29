@@ -5,6 +5,7 @@ import { ApiError } from "../util/ApiError.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { Video } from "../model/video.model.js";
 import { Comment } from "../model/comment.model.js";
+import { Tweet } from "../model/tweet.model.js";
 
 const toggleVideoLike = asyncHandler(async (req, res) => {
     const { videoId } = req.params;
@@ -60,7 +61,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     }
 
     const deletedLike = await Like.findOneAndDelete({
-        owner: req.user?._id,
+        likedBy: req.user?._id,
         parent: commentId,
         parentModel: "Comment",
     });
@@ -72,7 +73,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
     }
 
     const like = await Like.create({
-        owner: req.user?._id,
+        likedBy: req.user?._id,
         parent: commentId,
         parentModel: "Comment",
     });
@@ -100,7 +101,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
     }
 
     const deletedLike = await Like.findOneAndDelete({
-        owner: req.user?._id,
+        likedBy: req.user?._id,
         parent: tweetId,
         parentModel: "Tweet",
     });
@@ -110,7 +111,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
     }
 
     const like = await Like.create({
-        owner: req.user?._id,
+        likedBy: req.user?._id,
         parent: tweetId,
         parentModel: "Tweet",
     });
