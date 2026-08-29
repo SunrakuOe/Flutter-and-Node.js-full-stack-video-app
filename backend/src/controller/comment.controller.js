@@ -3,13 +3,15 @@ import { ApiResponse } from "../util/ApiResponse.js";
 import { Comment } from "../model/comment.model.js";
 import mongoose, { isValidObjectId } from "mongoose";
 import { asyncHandler } from "../util/asyncHandler.js";
+import { Tweet } from "../model/tweet.model.js";
+import { Video } from "../model/video.model.js";
 
-const getCommentsForParent = async (
+const getCommentsForParent = (
     parent,
     parentModel,
     { page = 1, limit = 10 } = {}
 ) => {
-    return await Comment.aggregate([
+    return Comment.aggregate([
         {
             $match: {
                 parent: new mongoose.Types.ObjectId(parent),
@@ -55,14 +57,16 @@ const getCommentsForParent = async (
                     $first: "$owner",
                 },
                 replyCount: {
-                    $size: "replies",
+                    $size: "$replies",
                 },
             },
         },
         {
-            content: 1,
-            owner: 1,
-            replyCount: 1,
+            $project: {
+                content: 1,
+                owner: 1,
+                replyCount: 1,
+            },
         },
     ]);
 };
@@ -80,7 +84,9 @@ const getVideoComments = asyncHandler(async (req, res) => {
         limit,
     });
 
-    return comments;
+    return res
+        .status(200)
+        .json(new ApiResponse(200, comments, "comments fetched successfully"));
 });
 
 const getTweetComments = asyncHandler(async (req, res) => {
@@ -96,7 +102,9 @@ const getTweetComments = asyncHandler(async (req, res) => {
         limit,
     });
 
-    return comments;
+    return res
+        .status(200)
+        .json(new ApiResponse(200, comments, "comments fetched successfully"));
 });
 
 const getCommentReplies = asyncHandler(async (req, res) => {
@@ -107,28 +115,92 @@ const getCommentReplies = asyncHandler(async (req, res) => {
         throw new ApiError(400, "invalid commentId");
     }
 
-    const comments = await getCommentsForParent(commentId, "commentId", {
+    const comments = await getCommentsForParent(commentId, "Comment", {
         page,
         limit,
     });
 
-    return comments;
+    return res
+        .status(200)
+        .json(new ApiResponse(200, comments, "comments fetched successfully"));
 });
 
-const addComment = asyncHandler(async (req, res) => {
-    const { parent, parentModel, content } = req.body || {};
+const addVideoComment = asyncHandler(async (req, res) => {
+    const { videoId, content } = req.body || {};
 
-    if (
-        [parent, parentModel, content].some((val) => !parent || !parent.trim())
-    ) {
+    if ([videoId, content].some((field) => !field || !field.trim())) {
         throw new ApiError(400, "all fields are required");
+    }
+
+    const video = await Video.exists({ _id: videoId });
+
+    if (!video) {
+        throw new ApiError(400, "video donsn't exist");
     }
 
     try {
         const comment = await Comment.create({
             owner: req.user?._id,
-            parent,
-            parentModel,
+            parent: videoId,
+            parentModel: "Video",
+            content,
+        });
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, comment, "comment added successfully"));
+    } catch (err) {
+        throw new ApiError(500, "failed to add comment");
+    }
+});
+
+const addTweetComment = asyncHandler(async (req, res) => {
+    const { tweetId, content } = req.body || {};
+
+    if ([tweetId, content].some((field) => !field || !field.trim())) {
+        throw new ApiError(400, "all fields are required");
+    }
+
+    const tweet = await Tweet.exists({ _id: tweetId });
+
+    if (!tweet) {
+        throw new ApiError(400, "tweet donsn't exist");
+    }
+
+    try {
+        const comment = await Comment.create({
+            owner: req.user?._id,
+            parent: tweetId,
+            parentModel: "Tweet",
+            content,
+        });
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, comment, "comment added successfully"));
+    } catch (err) {
+        throw new ApiError(500, "failed to add comment");
+    }
+});
+
+const addCommentReply = asyncHandler(async (req, res) => {
+    const { commentId, content } = req.body || {};
+
+    if ([commentId, content].some((field) => !field || !field.trim())) {
+        throw new ApiError(400, "all fields are required");
+    }
+
+    const comment = await Comment.exists({ _id: commentId });
+
+    if (!comment) {
+        throw new ApiError(400, "comment donsn't exist");
+    }
+
+    try {
+        const comment = await Comment.create({
+            owner: req.user?._id,
+            parent: commentId,
+            parentModel: "Comment",
             content,
         });
 
@@ -197,7 +269,9 @@ export {
     getVideoComments,
     getTweetComments,
     getCommentReplies,
-    addComment,
+    addVideoComment,
+    addTweetComment,
+    addCommentReply,
     updateComment,
     deleteComment,
 };
