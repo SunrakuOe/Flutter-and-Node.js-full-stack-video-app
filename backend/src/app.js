@@ -44,6 +44,10 @@ import commentRouter from "./route/comment.route.js"
 
 app.use("/api/v1/comment", commentRouter); 
 
+import playlistRoute from "./route/playlist.route.js";
+
+app.use("/api/v1/playlist", playlistRoute);
+
 //NOTE: add error handling middleware always at the end because this handler only get called by Express if any next(any argument and not necesserily an error) called before the handler
 // remember that the error-handling-middleware (a middleware with (err, req, res, next)) get called if the next(err) get called in any nearest(no any other error-handling-middleware in between) middleware that is attached before the error-handling middleware
 // if there is not any user defined error-handling middleware then the default error-handling middleware of Express will get called
