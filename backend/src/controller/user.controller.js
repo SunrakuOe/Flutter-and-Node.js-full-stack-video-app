@@ -10,6 +10,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 
 // TODO:  how to send a good res status code with api errors. best way to give api error
+//ANS: for that throw the error and then write the sending the error response in a error middleware
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -18,7 +19,17 @@ const generateAccessAndRefreshToken = async (userId) => {
         const refreshToken = user.generateRefreshToken();
 
         user.refreshToken = refreshToken;
-        await user.save({ validateBeforeSave: false }); //DOUBT: what is this line for?
+        await user.save({ validateBeforeSave: false });
+        // DOUBT: what is the validateBeforeSave do? what save() actually do - create a new document or update an existing one
+        /*ANS: 
+        
+        -> mongoose's .save() method is smart about create vs update. if the object new document then calling .save() on it creates a new document in the collection. 
+
+        -> and if the document is already exist (you have fetched from db) then calling .save() on it update the document
+
+        -> .save() always checks the schema validation (you have defined) despite it is creating a new document or updating it (only the .save() do that but query methods like findByIdAndUpdate())
+        
+        */
 
         return { accessToken, refreshToken }; //Note: this syntax mean {accessToken: accesstoken, refreshToken: refreshToken} - whent he variable name and the field name is same then we can do that
     } catch (error) {
@@ -37,6 +48,7 @@ const registerUser = asyncHandler(async (req, res) => {
     // console.log("req.body - ", req.body);
 
     //DOUBT: why we are not cheching all therese validations in a middleware. Arn't middlewares for these. Or can we use
+    //ANS: You are checking the same things in almost every controller. Instead you can define these in the Schema.methodes
 
     //info: the some() method returns ture if for any value the callback returns true
     if (
@@ -160,6 +172,7 @@ const loginUser = asyncHandler(async (req, res) => {
     console.log(user);
 
     //TODO: to comment everything below and console.log and see what if we search for a field which is not present in the document
+    // Ans: No, it wont throw an error
 
     if (!user) {
         throw new ApiError(404, "user does not exist");
@@ -188,16 +201,31 @@ const loginUser = asyncHandler(async (req, res) => {
     );
 
     //TODO: to learn about these otpions more
+    /* 
+    ANS: 
+    => maxAge: you specify the how long the cookie lives in miliseconds. If you don't specify this then its a session cookie - deleted when the browser closes.
+
+    => expires: Like maxAge but you specify an absolute Date instead of duration
+
+    => httpOnly: you give a boolean value(false by default). If true JS cannot read this cookie - only your browser send it in request. use for session token, auth cookies
+
+    => secure: default false. If true the cookies only sent over https. localhosts are exceptions.
+
+    */
     const options = {
         httpOnly: true,
         secure: true,
+        maxAge: 10 * 24 * 60 * 60 * 1000,
     };
 
     return (
         res
             .status(200)
             .cookie("accessToken", accessToken, options)
-            .cookie("refreshToken", refreshToken, options)
+            .cookie("refreshToken", refreshToken, {
+                ...options,
+                path: "/api/v1/refresh-token",
+            })
             //NOTE: we are sending the access and refresh token again in a json response, though we are sending them in cookies because incas of mobile applications because there is not cookies in mobile apps (or any apps)
             .json(
                 new ApiResponse(
@@ -214,12 +242,6 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 const logoutUser = asyncHandler(async (req, res) => {
-    /* 
-    DOUBT: - Can't we do user.save() here instead of User.findByIdAndUpdate ???
-    */
-
-    // TODO: see more about the more options like the $set
-
     await User.findByIdAndUpdate(
         req.user._id,
         {
@@ -293,8 +315,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 const changeCurrentPassword = asyncHandler(async (req, res) => {
     const { oldPassword, newPassword } = req.body || {};
 
-    if(!oldPassword || !newPassword) {
-        throw new ApiError(401, "old and new password required")
+    if (!oldPassword || !newPassword) {
+        throw new ApiError(401, "old and new password required");
     }
 
     const user = await User.findById(req.user?._id);
@@ -312,7 +334,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     }
 
     user.password = newPassword;
-    await user.save({ validateBeforeSave: false }); // DOUBT: what is this validate before save
+    await user.save({ validateBeforeSave: false });
 
     return res
         .status(200)
@@ -371,10 +393,12 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
-            $set: { avatar: {
-                url: avatar.url,
-                public_id: avatar.public_id
-            } },
+            $set: {
+                avatar: {
+                    url: avatar.url,
+                    public_id: avatar.public_id,
+                },
+            },
         },
         { returnDocument: "after" }
     ).select("-password");
@@ -406,10 +430,12 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
-            $set: { coverImage: {
-                url: coverImage.url,
-                public_id: coverImage.public_id
-            } },
+            $set: {
+                coverImage: {
+                    url: coverImage.url,
+                    public_id: coverImage.public_id,
+                },
+            },
         },
         { returnDocument: "after" }
     ).select("-password");
@@ -426,7 +452,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-    const {username} = req.params;
+    const { username } = req.params;
 
     if (!username?.trim()) {
         throw new ApiError(400, "username is required");
@@ -436,13 +462,15 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     const channel = await User.aggregate([
         {
             $match: {
-                userName: username?.toLowerCase(), // DOUBT: should we use a trimmed username here?
+                userName: username?.trim().toLowerCase(), // DOUBT: should we use a trimmed username here? ANS: you you should
             },
         },
-        // DOUBT: is doing frequent lookups(joins) in nosql databased defrease performance
+        // DOUBT: is doing frequent lookups(joins) in nosql databased decrease performance
+        // ANS: yes it hurt the performanct more than a well-indexed join in SQL. Also without an index on the foreign field each lookup does a collection scan per document, so make sure to used index in on fields you use lookup frequently to inprove the performance
         {
             $lookup: {
                 from: "subscriptions", // DOUBT: cannot we write "Subscription" like we do while passing a name to a model()? cannot it automatically make this lowercase and pluralize it
+                // ANS: No, you cannot do "Subscription" because $lookup talks to the raw MongoDB collection name, not a mongoose model. The auto-lowercase-pluralize conversion only happen only once at when the model is created - mongoose.model("Subscription",subscriptionSchema).
                 localField: "_id",
                 foreignField: "channel",
                 as: "subscribers",
@@ -460,9 +488,10 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
             $addFields: {
                 subscribersCount: {
                     $size: "$subscribers", // DOUBT: when do we add a $ symbol before the value
+                    //ANS: When you want MongoDB to treat the value as a a refrence to a fields value, rather than a literal string/number. like "subscription" - only a string but "$subscription" - it means the value at the subscription field
                 },
                 channelsSubscribedToCount: {
-                    $size: "$subscribedTo",
+                    $size: "$subscribedTo", // like it means the size of whatever array present at this field
                 },
                 isSubscribed: {
                     $cond: {
@@ -509,6 +538,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
     const user = await User.aggregate([
         {
             // DOUBT: does the match returns an array??
+            //NOTE: $match does not return array. arrregate and lookup always returns an array.
             $match: {
                 /* 
                 INFO: In case of these aggregation thing, the code goes directly to mongoDB, mongoose doesnot do any manipulation in the code. 
