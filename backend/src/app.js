@@ -4,12 +4,31 @@ import cookieParser from "cookie-parser";
 
 const app = express();
 
-app.use(
-    cors({
-        origin: process.env.CORS_ORIGIN,
-        credentials: true,
-    })
-);
+// app.use(
+//     cors({
+//         origin: process.env.CORS_ORIGIN,
+//         credentials: true,
+//     })
+// );
+// another way (more explicit) of whilisting domain for cors
+const corsOptions = {
+    origin: function (origin, callback) {
+        // NOTE: allow requests with no origin (like Postman, mobile apps)
+        //NOTE:  we are returning here because we don't want to go further if origin is not present
+        if (!origin) return callback(null, true);
+        //info: the first argument is the callback is error and second is isAllowOrigin
+        const allowedOrigins = ["http://localhost:3000"]; // use * to allow all
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error("Not allowed by cors"));
+        }
+    },
+    credentials: true, //needed if you are sending cookies
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json({ limit: "16kb" }));
 
@@ -38,11 +57,11 @@ app.use("/api/v1/tweet", tweetRouter);
 
 import likeRouter from "./route/like.route.js";
 
-app.use("/api/v1/like", likeRouter); 
+app.use("/api/v1/like", likeRouter);
 
-import commentRouter from "./route/comment.route.js"
+import commentRouter from "./route/comment.route.js";
 
-app.use("/api/v1/comment", commentRouter); 
+app.use("/api/v1/comment", commentRouter);
 
 import playlistRoute from "./route/playlist.route.js";
 
